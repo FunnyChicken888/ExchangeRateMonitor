@@ -3,7 +3,6 @@ FROM python:3.11-slim AS builder
 
 WORKDIR /build
 
-# Install build dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
         gcc \
         libmariadb-dev-compat \
@@ -21,9 +20,9 @@ LABEL description="24/7 spread monitor: MAX USDT/TWD vs NextBank USD sell rate"
 
 WORKDIR /app
 
-# Runtime system dependencies (MariaDB client libs for PyMySQL)
 RUN apt-get update && apt-get install -y --no-install-recommends \
         tzdata \
+        git \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy installed Python packages from builder
@@ -31,27 +30,27 @@ COPY --from=builder /install /usr/local
 
 # Copy application source
 COPY src/ ./src/
+COPY run.py ./run.py
+COPY .git/ ./.git/
 
-# Bake in config.json so NAS deployment needs no volume mount for config
-COPY config.json ./config.json
+# config.json 不打包進 image（含機密）— 請掛載為 volume：
+#   -v /volume1/docker/ExchangeRateMonitor/config.json:/app/config.json:ro
+# state.json 與 logs 也建議掛載，避免重啟後資料遺失
 
-# Create directories for named volumes (state + logs)
+# Create directories for named volumes
 RUN mkdir -p /app/logs /app/data
 
-# Default environment variables (overridable via docker-compose)
 ENV TZ=Asia/Taipei
 ENV CONFIG_PATH=/app/config.json
 ENV STATE_PATH=/app/state.json
 ENV PYTHONUNBUFFERED=1
 ENV PYTHONDONTWRITEBYTECODE=1
 
-# Health check — verify the process is alive
 HEALTHCHECK --interval=120s --timeout=10s --start-period=30s --retries=3 \
     CMD python -c "import os, sys; sys.exit(0 if os.path.exists('/app/state.json') else 1)"
 
-# Run as non-root user for security
 RUN useradd -r -u 1001 -g root monitor
 RUN chown -R monitor:root /app
 USER monitor
 
-CMD ["python", "-m", "src.main"]
+CMD ["python", "run.py"]

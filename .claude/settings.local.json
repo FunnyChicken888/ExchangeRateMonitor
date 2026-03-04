@@ -1,7 +1,11 @@
 {
   "permissions": {
     "allow": [
-      "Bash(python -m unittest tests/test_listener.py tests/test_core.py -v)"
+      "Bash(python -m unittest tests/test_listener.py tests/test_core.py -v)",
+      "Bash(docker build -t exchange-rate-monitor:latest .)",
+      "Bash(docker save exchange-rate-monitor:latest)",
+      "Bash(gzip)",
+      "Bash(docker tag exchange-rate-monitor:latest ghcr.io/funnychicken888/exchange-rate-monitor:latest)"
     ]
   }
 }

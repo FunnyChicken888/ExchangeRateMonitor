@@ -169,12 +169,15 @@ class TelegramCommandListener:
             self._cmd_status()
         elif command == "/history":
             self._cmd_history()
+        elif command == "/version":
+            self._cmd_version()
         else:
             self._send_reply(
                 "未知指令。可用指令：\n"
                 "/spread — 即時價差\n"
                 "/status — 系統狀態\n"
-                "/history — 今日已通知門檻"
+                "/history — 今日已通知門檻\n"
+                "/version — 目前執行版本"
             )
 
     # ── Command handlers ──────────────────────────────────────────────────
@@ -288,6 +291,37 @@ class TelegramCommandListener:
                 f"🕐 {now}"
             )
 
+        self._send_reply(text)
+
+    def _cmd_version(self) -> None:
+        """Show current git commit info."""
+        import subprocess
+        now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+        def _git(args):
+            r = subprocess.run(
+                ["git"] + args,
+                capture_output=True, text=True, timeout=5,
+            )
+            return r.stdout.strip() if r.returncode == 0 else "N/A"
+
+        commit  = _git(["rev-parse", "--short", "HEAD"])
+        branch  = _git(["rev-parse", "--abbrev-ref", "HEAD"])
+        tag     = _git(["describe", "--tags", "--exact-match", "HEAD"]) or "（無 tag）"
+        subject = _git(["log", "-1", "--format=%s"])
+        date    = _git(["log", "-1", "--format=%ci"])
+
+        text = (
+            "🔖 <b>目前執行版本</b>\n"
+            "\n"
+            f"Commit：<code>{commit}</code>\n"
+            f"Branch：<code>{branch}</code>\n"
+            f"Tag：<code>{tag}</code>\n"
+            f"訊息：{_escape_html(subject)}\n"
+            f"時間：<code>{date}</code>\n"
+            "\n"
+            f"🕐 {now}"
+        )
         self._send_reply(text)
 
 
