@@ -1,0 +1,66 @@
+version: "3.8"
+
+services:
+  exchange-monitor:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: exchange-rate-monitor:latest
+    container_name: exchange_rate_monitor
+    restart: unless-stopped
+
+    # ── Volume mounts ──────────────────────────────────────────────────────
+    # config.json  : read-only runtime configuration (fill from config.example.json)
+    # state.json   : read-write runtime state (auto-created on first run)
+    # logs/        : rotating log files
+    volumes:
+      - ./config.json:/app/config.json:ro
+      - ./state.json:/app/state.json
+      - ./logs:/app/logs
+
+    # ── Environment ────────────────────────────────────────────────────────
+    environment:
+      - TZ=Asia/Taipei
+      - CONFIG_PATH=/app/config.json
+      - STATE_PATH=/app/state.json
+      - PYTHONUNBUFFERED=1
+
+    # ── Logging ────────────────────────────────────────────────────────────
+    # Docker log rotation — keeps container logs lean.
+    # Application-level logs are also written to ./logs/ via config.json.
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+    # ── Resource limits (optional, tune for your NAS) ──────────────────────
+    # Uncomment and adjust if you want to cap CPU/memory usage.
+    # deploy:
+    #   resources:
+    #     limits:
+    #       cpus: "0.25"
+    #       memory: "128M"
+    #     reservations:
+    #       memory: "64M"
+
+    # ── Network ────────────────────────────────────────────────────────────
+    # Uses the default bridge network.
+    # If your NAS MariaDB is on a custom Docker network, add it here:
+    # networks:
+    #   - nas_network
+
+    # ── Health check ──────────────────────────────────────────────────────
+    healthcheck:
+      test: ["CMD", "python", "-c",
+             "import os, sys; sys.exit(0 if os.path.exists('/app/state.json') else 1)"]
+      interval: 2m
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+# ── External networks (uncomment if needed) ───────────────────────────────────
+# networks:
+#   nas_network:
+#     external: true
+#     name: nas_network

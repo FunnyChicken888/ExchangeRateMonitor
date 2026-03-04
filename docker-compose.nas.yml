@@ -1,0 +1,53 @@
+# ── NAS 部署用 docker-compose ──────────────────────────────────────────────────
+#
+# 特點：
+#   - config.json 已 bake 進 image，不需要掛載
+#   - state.json 存在 named volume（Docker 自動建立）
+#   - logs 存在 named volume（Docker 自動建立）
+#   - NAS 上只需要：docker load + docker compose -f docker-compose.nas.yml up -d
+#
+# 使用方式：
+#   docker load -i exchange-rate-monitor.tar
+#   docker compose -f docker-compose.nas.yml up -d
+#
+# 查看 log：
+#   docker logs exchange_rate_monitor -f
+# ──────────────────────────────────────────────────────────────────────────────
+
+services:
+  exchange-monitor:
+    image: exchange-rate-monitor:latest
+    container_name: exchange_rate_monitor
+    restart: unless-stopped
+
+    volumes:
+      # Named volumes — Docker 自動建立，不需要手動建目錄或檔案
+      - exchange_monitor_data:/app/data
+      - exchange_monitor_logs:/app/logs
+
+    environment:
+      - TZ=Asia/Taipei
+      - CONFIG_PATH=/app/config.json          # baked into image
+      - STATE_PATH=/app/data/state.json       # stored in named volume
+      - PYTHONUNBUFFERED=1
+
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+    healthcheck:
+      test: ["CMD", "python", "-c",
+             "import os, sys; sys.exit(0 if os.path.exists('/app/data/state.json') else 1)"]
+      interval: 2m
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+# Named volumes — 由 Docker 自動管理，資料在容器重啟後保留
+volumes:
+  exchange_monitor_data:
+    name: exchange_monitor_data
+  exchange_monitor_logs:
+    name: exchange_monitor_logs

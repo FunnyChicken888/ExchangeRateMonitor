@@ -1,0 +1,1 @@
+# ExchangeRateMonitor package

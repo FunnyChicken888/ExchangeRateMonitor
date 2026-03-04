@@ -1,0 +1,36 @@
+# Runtime config (contains secrets)
+config.json
+
+# Runtime state
+state.json
+
+# Logs
+logs/
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+dist/
+build/
+.eggs/
+*.egg
+.env
+.venv
+venv/
+env/
+
+# Docker
+*.env
+*.tar
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
